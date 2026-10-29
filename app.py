@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import streamlit as st
@@ -18,12 +19,22 @@ st.warning(
 )
 
 store = HistoryStore(DB_PATH)
-service = InferenceService.from_checkpoint(ARTIFACT) if ARTIFACT.exists() else InferenceService.demo()
+load_error = None
+if ARTIFACT.exists():
+    try:
+        service = InferenceService.from_checkpoint(ARTIFACT)
+    except PredictionError as exc:
+        service = InferenceService.demo()
+        load_error = str(exc)
+else:
+    service = InferenceService.demo()
 
 with st.sidebar:
     st.header("System status")
     if service.is_demo:
         st.info("Demo mode: no trained checkpoint is installed.")
+        if load_error:
+            st.error(f"Checkpoint fallback: {load_error}")
         st.code("python -m edge_ai.train ...", language="powershell")
     else:
         st.success(f"Model loaded: {service.model_name}")
@@ -68,7 +79,19 @@ elif page == "Results":
     else:
         for result_file in result_files:
             st.markdown(f"**{result_file.name}**")
-            st.json(result_file.read_text(encoding="utf-8"))
+            try:
+                result = json.loads(result_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                st.error(f"Could not read {result_file.name}: {exc}")
+                continue
+            metrics = {
+                key: result[key]
+                for key in ("accuracy", "macro_precision", "macro_recall", "macro_f1")
+                if key in result
+            }
+            if metrics:
+                st.dataframe([metrics], use_container_width=True, hide_index=True)
+            st.json(result)
 else:
     st.subheader("About this prototype")
     st.markdown(

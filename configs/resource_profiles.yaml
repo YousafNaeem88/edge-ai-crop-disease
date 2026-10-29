@@ -1,0 +1,19 @@
+profiles:
+  reference:
+    description: Native execution on the development computer.
+    input_size: 224
+    batch_size: 1
+    artificial_delay_ms: 0
+    interpretation: measured
+  constrained:
+    description: Software-defined reduced input and batch profile.
+    input_size: 160
+    batch_size: 1
+    artificial_delay_ms: 0
+    interpretation: analytical scenario, not physical hardware
+  strict_demo:
+    description: Demonstration profile with controlled delay.
+    input_size: 128
+    batch_size: 1
+    artificial_delay_ms: 50
+    interpretation: simulated delay; not a power or thermal measurement

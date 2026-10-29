@@ -36,21 +36,33 @@ class InferenceService:
 
     @classmethod
     def from_checkpoint(cls, path: Path) -> InferenceService:
+        if not path.is_file():
+            raise PredictionError(f"Checkpoint does not exist: {path}")
         try:
             import torch
             from torchvision import models, transforms
         except ImportError as exc:
             raise PredictionError("PyTorch and torchvision are required to load a checkpoint") from exc
-        checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+        try:
+            checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise PredictionError(f"Checkpoint could not be loaded: {path}") from exc
         labels = checkpoint.get("labels")
+        if not isinstance(labels, list) or not labels:
+            raise PredictionError("Checkpoint is missing a non-empty labels list")
         architecture = checkpoint.get("architecture", "resnet18")
+        if architecture not in {"resnet18", "mobilenet_v3_small"}:
+            raise PredictionError(f"Unsupported checkpoint architecture: {architecture}")
         factory = models.resnet18 if architecture == "resnet18" else models.mobilenet_v3_small
         model = factory(weights=None)
         if architecture == "resnet18":
             model.fc = torch.nn.Linear(model.fc.in_features, len(labels))
         else:
             model.classifier[-1] = torch.nn.Linear(model.classifier[-1].in_features, len(labels))
-        model.load_state_dict(checkpoint["state_dict"])
+        try:
+            model.load_state_dict(checkpoint["state_dict"])
+        except (KeyError, RuntimeError) as exc:
+            raise PredictionError("Checkpoint weights do not match its architecture") from exc
         model.eval()
         service = cls(model, labels, architecture)
         service._transform = transforms.Compose(

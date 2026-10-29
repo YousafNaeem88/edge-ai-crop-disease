@@ -36,6 +36,7 @@ data/raw/
 Then create a manifest:
 
 ```powershell
+python -m edge_ai.audit --input data/raw --output results/dataset_audit.json
 python -m edge_ai.data prepare --input data/raw --output data/manifest.csv --seed 42
 ```
 
@@ -59,6 +60,11 @@ confusion matrix, parameter count, checkpoint size, and repeatable CPU latency m
 The Streamlit **Results** page displays saved evaluation JSON files.
 
 The training command supports `--epochs`, `--batch-size`, `--image-size`, `--seed`, and `--device`. Use `--no-pretrained` when working without internet access or cached torchvision weights.
+
+The audit command records valid/invalid files, class counts, common image dimensions,
+and explicit limitations before model training. Resource profiles are documented in
+`configs/resource_profiles.yaml`; they must not be described as physical-device
+measurements.
 
 For deployment and evidence collection, see `docs/PROJECT_OPERATIONS.md`. A `Dockerfile`
 is included for a self-contained local deployment.
