@@ -5,6 +5,7 @@ __pycache__/
 *.py[cod]
 .streamlit/secrets.toml
 data/raw/
+data/downloads/
 data/processed/
 data/*.csv
 data/*.sqlite3
