@@ -7,9 +7,9 @@ __pycache__/
 data/raw/
 data/processed/
 data/*.csv
+data/*.sqlite3
 artifacts/
 results/
 *.pt
 *.pth
 *.onnx
-
