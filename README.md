@@ -51,6 +51,7 @@ Evaluate and benchmark:
 ```powershell
 python -m edge_ai.evaluate --checkpoint artifacts/resnet18.pt --manifest data/manifest.csv --output results/resnet18.json
 python -m edge_ai.quantize --checkpoint artifacts/resnet18.pt --output artifacts/resnet18_quantized.pt
+python -m edge_ai.benchmark --checkpoint artifacts/resnet18.pt --image path/to/test.jpg --output results/latency.json
 ```
 
 The evaluation JSON contains accuracy, macro precision/recall/F1, a per-class report,
@@ -58,6 +59,9 @@ confusion matrix, parameter count, checkpoint size, and repeatable CPU latency m
 The Streamlit **Results** page displays saved evaluation JSON files.
 
 The training command supports `--epochs`, `--batch-size`, `--image-size`, `--seed`, and `--device`. Use `--no-pretrained` when working without internet access or cached torchvision weights.
+
+For deployment and evidence collection, see `docs/PROJECT_OPERATIONS.md`. A `Dockerfile`
+is included for a self-contained local deployment.
 
 ## Offline verification
 

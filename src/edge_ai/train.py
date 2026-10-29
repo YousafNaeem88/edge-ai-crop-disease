@@ -22,6 +22,9 @@ def train(args: argparse.Namespace) -> None:
     label_to_index = {label: index for index, label in enumerate(labels)}
     transform = transforms.Compose([transforms.Resize((args.image_size, args.image_size)), transforms.ToTensor()])
     samples = [(row["path"], label_to_index[row["label"]]) for row in rows if row["split"] == "train"]
+    validation_samples = [
+        (row["path"], label_to_index[row["label"]]) for row in rows if row["split"] == "validation"
+    ]
     class ManifestDataset(Dataset):
         def __init__(self, items):
             self.items = items
@@ -36,17 +39,22 @@ def train(args: argparse.Namespace) -> None:
             return transform(image), target
 
     dataset = ManifestDataset(samples)
+    validation_dataset = ManifestDataset(validation_samples)
     if args.model == "resnet18":
         model = models.resnet18(weights=None if args.no_pretrained else models.ResNet18_Weights.DEFAULT)
         model.fc = nn.Linear(model.fc.in_features, len(labels))
     else:
         model = models.mobilenet_v3_small(weights=None if args.no_pretrained else models.MobileNet_V3_Small_Weights.DEFAULT)
         model.classifier[-1] = nn.Linear(model.classifier[-1].in_features, len(labels))
-    model.to(device).train()
+    model.to(device)
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    validation_loader = DataLoader(validation_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     criterion = nn.CrossEntropyLoss()
+    best_loss = float("inf")
+    best_state = None
     for epoch in range(args.epochs):
+        model.train()
         total = 0.0
         for images, targets in loader:
             optimizer.zero_grad()
@@ -54,9 +62,31 @@ def train(args: argparse.Namespace) -> None:
             loss.backward()
             optimizer.step()
             total += float(loss)
-        print(f"epoch={epoch + 1} loss={total / max(len(loader), 1):.4f}")
+        model.eval()
+        validation_loss = 0.0
+        with torch.inference_mode():
+            for images, targets in validation_loader:
+                validation_loss += float(criterion(model(images.to(device)), targets.to(device)))
+        validation_loss /= max(len(validation_loader), 1)
+        print(
+            f"epoch={epoch + 1} train_loss={total / max(len(loader), 1):.4f} "
+            f"validation_loss={validation_loss:.4f}"
+        )
+        if validation_loss < best_loss:
+            best_loss = validation_loss
+            best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"architecture": args.model, "labels": labels, "state_dict": model.cpu().state_dict()}, args.output)
+    torch.save(
+        {
+            "architecture": args.model,
+            "labels": labels,
+            "state_dict": best_state or model.cpu().state_dict(),
+            "image_size": args.image_size,
+            "seed": args.seed,
+            "best_validation_loss": best_loss if best_state is not None else None,
+        },
+        args.output,
+    )
 
 
 def main() -> None:
