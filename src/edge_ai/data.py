@@ -10,7 +10,9 @@ from PIL import Image, UnidentifiedImageError
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
-def build_manifest(input_dir: Path, output: Path, seed: int = 42) -> None:
+def build_manifest(
+    input_dir: Path, output: Path, seed: int = 42, max_per_class: int | None = None
+) -> None:
     records: list[tuple[str, str]] = []
     for class_dir in sorted(p for p in input_dir.iterdir() if p.is_dir()):
         for path in sorted(class_dir.rglob("*")):
@@ -32,6 +34,8 @@ def build_manifest(input_dir: Path, output: Path, seed: int = 42) -> None:
     for label in sorted(grouped):
         examples = grouped[label]
         rng.shuffle(examples)
+        if max_per_class is not None:
+            examples = examples[:max_per_class]
         total = len(examples)
         test_count = max(1, round(total * 0.15)) if total >= 3 else 0
         validation_count = max(1, round(total * 0.15)) if total >= 4 else 0
@@ -55,6 +59,7 @@ def build_manifest(input_dir: Path, output: Path, seed: int = 42) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Create a reproducible image manifest")
+    parser.add_argument("command", nargs="?", choices=["prepare"])
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=42)
