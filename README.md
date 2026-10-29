@@ -53,6 +53,10 @@ python -m edge_ai.evaluate --checkpoint artifacts/resnet18.pt --manifest data/ma
 python -m edge_ai.quantize --checkpoint artifacts/resnet18.pt --output artifacts/resnet18_quantized.pt
 ```
 
+The evaluation JSON contains accuracy, macro precision/recall/F1, a per-class report,
+confusion matrix, parameter count, checkpoint size, and repeatable CPU latency measurements.
+The Streamlit **Results** page displays saved evaluation JSON files.
+
 The training command supports `--epochs`, `--batch-size`, `--image-size`, `--seed`, and `--device`. Use `--no-pretrained` when working without internet access or cached torchvision weights.
 
 ## Offline verification
@@ -68,4 +72,3 @@ Upload an image, verify a prediction is returned, and confirm the record appears
 ## Project limitations
 
 Software resource profiles are analytical constraints, not physical-device measurements. This project does not claim Raspberry Pi performance, energy consumption, thermal behaviour, or field-level diagnostic accuracy. Predictions are decision-support outputs, not agricultural diagnoses.
-

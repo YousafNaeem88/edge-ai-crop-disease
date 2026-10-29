@@ -27,7 +27,7 @@ with st.sidebar:
         st.code("python -m edge_ai.train ...", language="powershell")
     else:
         st.success(f"Model loaded: {service.model_name}")
-    page = st.radio("Navigate", ["Predict", "History", "About"])
+    page = st.radio("Navigate", ["Predict", "History", "Results", "About"])
 
 if page == "Predict":
     st.subheader("Local prediction")
@@ -53,6 +53,20 @@ elif page == "History":
         if st.button("Delete all local history"):
             store.clear()
             st.rerun()
+    elif page == "Results":
+        st.subheader("Experiment results")
+        result_files = sorted(Path("results").glob("*.json"))
+        if not result_files:
+            st.info("No evaluation JSON found. Run the evaluation command after training a checkpoint.")
+            st.code(
+                "python -m edge_ai.evaluate --checkpoint artifacts/model.pt "
+                "--manifest data/manifest.csv --output results/model.json",
+                language="powershell",
+            )
+        else:
+            for result_file in result_files:
+                st.markdown(f"**{result_file.name}**")
+                st.json(result_file.read_text(encoding="utf-8"))
     else:
         st.info("No local predictions have been recorded yet.")
 else:
@@ -67,4 +81,3 @@ else:
     )
     st.write("Database:", str(DB_PATH))
     st.write("Checkpoint:", str(ARTIFACT))
-
