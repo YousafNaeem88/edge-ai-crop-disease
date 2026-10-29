@@ -46,6 +46,9 @@ The MobileNetV3-Small result is the current deployed checkpoint at
 is not a final scientific claim; it is a reproducible baseline for subsequent
 tuning and additional epochs.
 
+The trained checkpoint is distributed as a release asset:
+https://github.com/YousafNaeem88/edge-ai-crop-disease/releases/tag/v0.1.0
+
 Dynamic quantization reduced the MobileNetV3-Small checkpoint from 6,356,039
 bytes to 4,486,603 bytes in this environment. Quantized accuracy must be
 measured separately before treating it as the final model.

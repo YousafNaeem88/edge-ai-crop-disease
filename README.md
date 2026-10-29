@@ -10,6 +10,21 @@ An offline-capable Python prototype for crop-disease image classification. The p
 
 The application never calls an external inference API. A trained checkpoint is required for real predictions. Until one is supplied, the UI runs in clearly labelled **demo mode** using a deterministic image-colour heuristic; demo outputs are not model results.
 
+## Download the trained checkpoint
+
+A real MobileNetV3-Small checkpoint trained on all 38 PlantVillage classes is
+available in the [v0.1.0 release](https://github.com/YousafNaeem88/edge-ai-crop-disease/releases/tag/v0.1.0).
+Download `model.pt` into `artifacts/model.pt`, then launch the app. The release
+also contains an experimental quantized artifact.
+
+```powershell
+New-Item -ItemType Directory -Force artifacts | Out-Null
+Invoke-WebRequest `
+  -Uri https://github.com/YousafNaeem88/edge-ai-crop-disease/releases/download/v0.1.0/model.pt `
+  -OutFile artifacts/model.pt
+streamlit run app.py
+```
+
 ## Quick start
 
 ```powershell
