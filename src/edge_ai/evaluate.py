@@ -78,6 +78,28 @@ def evaluate_checkpoint(checkpoint_path: Path, manifest_path: Path, output_path:
         "latency_ms_mean": float(sum(latencies) / len(latencies)),
         "measurement": "CPU inference only; preprocessing excluded; batch size 1",
     }
+    if "crop" in rows[0]:
+        per_crop: dict[str, dict[str, Any]] = {}
+        for crop in sorted({row["crop"] for row in rows}):
+            indexes = [index for index, row in enumerate(rows) if row["crop"] == crop]
+            crop_actual = [actual[index] for index in indexes]
+            crop_predicted = [predicted[index] for index in indexes]
+            crop_labels = sorted({value for value in crop_actual})
+            per_crop[crop] = {
+                "examples": len(indexes),
+                "accuracy": float(accuracy_score(crop_actual, crop_predicted)),
+                "macro_f1": float(
+                    classification_report(
+                        crop_actual,
+                        crop_predicted,
+                        labels=crop_labels,
+                        target_names=[labels[index] for index in crop_labels],
+                        output_dict=True,
+                        zero_division=0,
+                    )["macro avg"]["f1-score"]
+                ),
+            }
+        result["per_crop"] = per_crop
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
     return result

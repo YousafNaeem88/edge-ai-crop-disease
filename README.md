@@ -69,6 +69,33 @@ locally. Set it to a larger value or remove the limit when hardware permits.
 The checked-in experiment record and measured baseline results are in
 `docs/PLANTVILLAGE_EXPERIMENT.md`.
 
+### Indian multi-crop baseline
+
+The repository also includes a reproducible acquisition and training workflow
+for an Indian multi-crop source containing cotton, wheat, corn, sugarcane,
+rice, and jute:
+
+```powershell
+# The archive is downloaded separately; do not commit it.
+Invoke-WebRequest `
+  -Uri https://huggingface.co/datasets/rohitashva/indian_crop_diseases/resolve/main/dataset.zip `
+  -OutFile data/downloads/indian_crop_diseases.zip
+Expand-Archive data/downloads/indian_crop_diseases.zip -DestinationPath data/raw/indian_crop_diseases -Force
+python scripts/prepare_multicrop.py
+python scripts/train_multicrop.py --epochs 1 --max-per-class 100
+$env:PYTHONPATH = "src"
+python -m edge_ai.evaluate `
+  --checkpoint artifacts/indian_multicrop_mobilenet_v3_small.pt `
+  --manifest data/indian_multicrop_manifest_capped.csv `
+  --output results/indian_multicrop_mobilenet.json
+```
+
+The current capped baseline reaches 70.31% accuracy, 68.68% macro-F1, and
+15.57 ms median CPU latency on 1,472 held-out examples. Full details,
+per-crop metrics, provenance, and limitations are in
+`docs/INDIAN_MULTICROP_EXPERIMENT.md`. Mustard is explicitly not claimed by
+this model because the source contains no mustard classes.
+
 Train a baseline or lightweight model:
 
 ```powershell

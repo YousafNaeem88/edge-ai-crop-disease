@@ -6,7 +6,9 @@ import streamlit as st
 from edge_ai.inference import InferenceService, PredictionError
 from edge_ai.storage import HistoryStore
 
-ARTIFACT = Path("artifacts/model.pt")
+ARTIFACT = Path("artifacts/indian_multicrop_mobilenet_v3_small.pt")
+if not ARTIFACT.exists():
+    ARTIFACT = Path("artifacts/model.pt")
 DB_PATH = Path("data/history.sqlite3")
 
 st.set_page_config(page_title="Crop Disease Edge-AI", page_icon="🌿", layout="wide")
@@ -44,7 +46,7 @@ if page == "Predict":
     st.subheader("Local prediction")
     uploaded = st.file_uploader("Upload a crop or leaf image", type=["jpg", "jpeg", "png", "webp"])
     if uploaded:
-        st.image(uploaded, caption="Input image", use_container_width=True)
+        st.image(uploaded, caption="Input image", width="stretch")
         if st.button("Run local inference", type="primary"):
             try:
                 result = service.predict_bytes(uploaded.getvalue())
@@ -60,7 +62,7 @@ elif page == "History":
     st.subheader("Local prediction history")
     rows = store.list(limit=100)
     if rows:
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.dataframe(rows, width="stretch", hide_index=True)
         if st.button("Delete all local history"):
             store.clear()
             st.rerun()
@@ -90,7 +92,7 @@ elif page == "Results":
                 if key in result
             }
             if metrics:
-                st.dataframe([metrics], use_container_width=True, hide_index=True)
+                st.dataframe([metrics], width="stretch", hide_index=True)
             st.json(result)
 else:
     st.subheader("About this prototype")
