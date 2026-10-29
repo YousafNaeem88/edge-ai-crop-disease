@@ -31,11 +31,11 @@ class InferenceService:
         self._transform = None
 
     @classmethod
-    def demo(cls) -> "InferenceService":
+    def demo(cls) -> InferenceService:
         return cls()
 
     @classmethod
-    def from_checkpoint(cls, path: Path) -> "InferenceService":
+    def from_checkpoint(cls, path: Path) -> InferenceService:
         try:
             import torch
             from torchvision import models, transforms
@@ -84,4 +84,3 @@ class InferenceService:
             index = int(torch.argmax(probabilities))
             label, confidence = self.labels[index], float(probabilities[index])
         return Prediction(label, confidence, self.model_name, (time.perf_counter() - started) * 1000, self.is_demo)
-

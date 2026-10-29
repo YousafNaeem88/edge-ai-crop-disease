@@ -8,15 +8,16 @@ from pathlib import Path
 
 def train(args: argparse.Namespace) -> None:
     import torch
+    from PIL import Image
     from torch import nn
     from torch.utils.data import DataLoader, Dataset
     from torchvision import models, transforms
-    from PIL import Image
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     device = torch.device(args.device)
-    rows = list(csv.DictReader(Path(args.manifest).open(encoding="utf-8")))
+    with Path(args.manifest).open(encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
     labels = sorted({row["label"] for row in rows})
     label_to_index = {label: index for index, label in enumerate(labels)}
     transform = transforms.Compose([transforms.Resize((args.image_size, args.image_size)), transforms.ToTensor()])
