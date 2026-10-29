@@ -41,7 +41,7 @@ python -m edge_ai.data prepare --input data/raw --output data/manifest.csv --see
 ```
 
 To download the complete public PlantVillage archive (54,306 images, 14 crops,
-and 26 classes) and run a reproducible two-model experiment:
+and 38 labelled classes) and run a reproducible two-model experiment:
 
 ```powershell
 python scripts/download_plantvillage.py
@@ -51,6 +51,8 @@ python scripts/train_plantvillage.py --epochs 2 --max-per-class 1000
 
 `--max-per-class` is a compute control only; the full archive remains available
 locally. Set it to a larger value or remove the limit when hardware permits.
+The checked-in experiment record and measured baseline results are in
+`docs/PLANTVILLAGE_EXPERIMENT.md`.
 
 Train a baseline or lightweight model:
 

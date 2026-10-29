@@ -61,7 +61,7 @@ def train(args: argparse.Namespace) -> None:
             loss = criterion(model(images.to(device)), targets.to(device))
             loss.backward()
             optimizer.step()
-            total += float(loss)
+            total += float(loss.detach())
         model.eval()
         validation_loss = 0.0
         with torch.inference_mode():

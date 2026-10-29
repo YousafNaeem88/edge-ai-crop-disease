@@ -33,3 +33,7 @@ def main() -> None:
             no_pretrained=False,
         )
         train(train_args)
+
+
+if __name__ == "__main__":
+    main()

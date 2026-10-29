@@ -10,7 +10,7 @@ from PIL import Image, UnidentifiedImageError
 from .data import EXTENSIONS
 
 
-def audit_dataset(input_dir: Path, output: Path) -> dict[str, object]:
+def audit_dataset(input_dir: Path, output: Path, verify_all: bool = False) -> dict[str, object]:
     classes: Counter[str] = Counter()
     invalid_files: list[str] = []
     dimensions: Counter[str] = Counter()
@@ -20,10 +20,13 @@ def audit_dataset(input_dir: Path, output: Path) -> dict[str, object]:
                 continue
             try:
                 with Image.open(path) as image:
-                    image.verify()
-                with Image.open(path) as image:
-                    classes[class_dir.name] += 1
-                    dimensions[f"{image.width}x{image.height}"] += 1
+                    if verify_all:
+                        image.verify()
+                    else:
+                        image.getbands()
+                    if dimensions.total() < 1000:
+                        dimensions[f"{image.width}x{image.height}"] += 1
+                classes[class_dir.name] += 1
             except (UnidentifiedImageError, OSError):
                 invalid_files.append(str(path))
     if not classes:
@@ -39,6 +42,7 @@ def audit_dataset(input_dir: Path, output: Path) -> dict[str, object]:
         "limitations": [
             "This audit does not detect semantic mislabels.",
             "Near-duplicate and source-sequence leakage require additional review.",
+            "By default, image decoding is sampled; use --verify-all for a full decode pass.",
         ],
     }
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -50,8 +54,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Audit a folder-per-class image dataset")
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--verify-all", action="store_true")
     args = parser.parse_args()
-    result = audit_dataset(args.input, args.output)
+    result = audit_dataset(args.input, args.output, verify_all=args.verify_all)
     print(f"valid_images={result['total_valid_images']} classes={result['class_count']}")
 
 
