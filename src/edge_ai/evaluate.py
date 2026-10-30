@@ -47,6 +47,7 @@ def evaluate_checkpoint(checkpoint_path: Path, manifest_path: Path, output_path:
 
     actual: list[int] = []
     predicted: list[int] = []
+    confidences: list[float] = []
     latencies: list[float] = []
     with torch.inference_mode():
         for row in rows:
@@ -56,7 +57,9 @@ def evaluate_checkpoint(checkpoint_path: Path, manifest_path: Path, output_path:
             output = model(tensor)
             latencies.append((time.perf_counter() - started) * 1000)
             actual.append(label_to_index[row["label"]])
-            predicted.append(int(output.argmax(dim=1).item()))
+            probabilities = torch.softmax(output, dim=1)[0]
+            predicted.append(int(probabilities.argmax().item()))
+            confidences.append(float(probabilities.max().item()))
 
     report = classification_report(
         actual,
@@ -83,6 +86,20 @@ def evaluate_checkpoint(checkpoint_path: Path, manifest_path: Path, output_path:
         "latency_ms_mean": float(sum(latencies) / len(latencies)),
         "measurement": "CPU inference only; preprocessing excluded; batch size 1",
     }
+    bins = 10
+    calibration_error = 0.0
+    for lower in [index / bins for index in range(bins)]:
+        upper = lower + (1 / bins)
+        selected = [
+            index
+            for index, confidence in enumerate(confidences)
+            if lower <= confidence < upper or (upper == 1.0 and confidence <= upper)
+        ]
+        if selected:
+            accuracy = sum(actual[index] == predicted[index] for index in selected) / len(selected)
+            mean_confidence = sum(confidences[index] for index in selected) / len(selected)
+            calibration_error += len(selected) / len(confidences) * abs(accuracy - mean_confidence)
+    result["expected_calibration_error_10bin"] = float(calibration_error)
     if "crop" in rows[0]:
         per_crop: dict[str, dict[str, Any]] = {}
         for crop in sorted({row["crop"] for row in rows}):

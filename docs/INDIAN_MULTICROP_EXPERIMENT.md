@@ -35,6 +35,7 @@ leaf-safe augmentation, image size 224, and seed 42.
 | Macro precision | 96.22% |
 | Macro recall | 96.15% |
 | Macro F1 | 96.20% |
+| Expected calibration error (10 bins) | 13.65% |
 | Median CPU latency | 15.49 ms |
 
 The dynamic-quantized checkpoint reaches 96.94% accuracy and 96.01% macro-F1
