@@ -82,7 +82,7 @@ Invoke-WebRequest `
   -OutFile data/downloads/indian_crop_diseases.zip
 Expand-Archive data/downloads/indian_crop_diseases.zip -DestinationPath data/raw/indian_crop_diseases -Force
 python scripts/prepare_multicrop.py
-python scripts/train_multicrop.py --epochs 1 --max-per-class 100
+python scripts/train_multicrop.py --epochs 5 --balanced-sampling
 $env:PYTHONPATH = "src"
 python -m edge_ai.evaluate `
   --checkpoint artifacts/indian_multicrop_mobilenet_v3_small.pt `
@@ -90,9 +90,9 @@ python -m edge_ai.evaluate `
   --output results/indian_multicrop_mobilenet.json
 ```
 
-The current capped baseline reaches 70.31% accuracy, 68.68% macro-F1, and
-15.57 ms median CPU latency on 1,472 held-out examples. Full details,
-per-crop metrics, provenance, and limitations are in
+The full-data balanced run reaches 97.05% accuracy, 96.20% macro-F1, and
+15.49 ms median CPU latency on 1,731 held-out examples. Full details,
+per-crop metrics, provenance, quantization results, and limitations are in
 `docs/INDIAN_MULTICROP_EXPERIMENT.md`. Mustard is explicitly not claimed by
 this model because the source contains no mustard classes.
 

@@ -15,14 +15,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Train the multi-crop Edge-AI classifier")
     parser.add_argument("--manifest", type=Path, default=Path("data/indian_multicrop_manifest.csv"))
     parser.add_argument("--output", type=Path, default=Path("artifacts/indian_multicrop_mobilenet_v3_small.pt"))
-    parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--image-size", type=int, default=224)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--no-pretrained", action="store_true")
-    parser.add_argument("--max-per-class", type=int, default=100)
+    parser.add_argument("--max-per-class", type=int, default=0)
+    parser.add_argument("--balanced-sampling", action="store_true")
     args = parser.parse_args()
     if args.max_per_class:
         with args.manifest.open(encoding="utf-8") as handle:

@@ -23,22 +23,29 @@ remains practical on a CPU. Increase it or remove it for a larger run.
 
 ## Measured baseline
 
-The current reproducible capped run uses MobileNetV3-Small with torchvision
-pretrained initialization, one training epoch, batch size 32, image size 224,
-and seed 42.
+The original capped run used one epoch and is retained for comparison. The
+stronger recommended run uses all available training images, torchvision
+pretrained initialization, five epochs, batch size 64, balanced sampling,
+leaf-safe augmentation, image size 224, and seed 42.
 
 | Metric | Value |
 |---|---:|
-| Test examples | 1,472 |
-| Accuracy | 70.31% |
-| Macro precision | 76.22% |
-| Macro recall | 69.26% |
-| Macro F1 | 68.68% |
-| Median CPU latency | 15.57 ms |
+| Test examples | 1,731 |
+| Accuracy | 97.05% |
+| Macro precision | 96.22% |
+| Macro recall | 96.15% |
+| Macro F1 | 96.20% |
+| Median CPU latency | 15.49 ms |
 
-These are a baseline experiment, not a field-diagnostic accuracy claim.
-Images are curated dataset examples, and the run has not been validated on
-farmer-captured images or a physical edge device.
+The dynamic-quantized checkpoint reaches 96.94% accuracy and 96.01% macro-F1
+with a 17.66 ms median CPU latency. Quantization is an experimental
+compatibility path because eager-mode quantization is deprecated in newer
+PyTorch releases.
+
+These are curated-dataset results, not a field-diagnostic accuracy claim. The
+run has not been validated on farmer-captured images or a physical edge
+device. A high held-out score can still overestimate real-world performance
+when images share collection conditions or visual backgrounds.
 
 ## Data limitations
 

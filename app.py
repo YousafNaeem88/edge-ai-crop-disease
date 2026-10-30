@@ -6,9 +6,18 @@ import streamlit as st
 from edge_ai.inference import InferenceService, PredictionError
 from edge_ai.storage import HistoryStore
 
-ARTIFACT = Path("artifacts/indian_multicrop_mobilenet_v3_small.pt")
-if not ARTIFACT.exists():
-    ARTIFACT = Path("artifacts/model.pt")
+ARTIFACT = next(
+    (
+        candidate
+        for candidate in (
+            Path("artifacts/indian_multicrop_mobilenet_v3_small_full.pt"),
+            Path("artifacts/indian_multicrop_mobilenet_v3_small.pt"),
+            Path("artifacts/model.pt"),
+        )
+        if candidate.exists()
+    ),
+    Path("artifacts/model.pt"),
+)
 DB_PATH = Path("data/history.sqlite3")
 
 st.set_page_config(page_title="Crop Disease Edge-AI", page_icon="🌿", layout="wide")
@@ -53,6 +62,15 @@ if page == "Predict":
                 st.metric("Predicted class", result.label)
                 st.metric("Confidence", f"{result.confidence:.1%}")
                 st.caption(f"Model: {result.model_name} · Latency: {result.latency_ms:.1f} ms")
+                if result.confidence < 0.55:
+                    st.warning("Low confidence: retake the image with the leaf centered and well lit.")
+                if result.top_k:
+                    st.subheader("Top predictions")
+                    st.dataframe(
+                        [{"class": label, "confidence": f"{confidence:.1%}"} for label, confidence in result.top_k],
+                        width="stretch",
+                        hide_index=True,
+                    )
                 if result.is_demo:
                     st.info("This is a deterministic demo heuristic, not a trained model result.")
                 store.add(result.label, result.confidence, result.model_name)

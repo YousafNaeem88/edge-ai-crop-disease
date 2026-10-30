@@ -20,6 +20,7 @@ class Prediction:
     model_name: str
     latency_ms: float
     is_demo: bool = False
+    top_k: tuple[tuple[str, float], ...] = ()
 
 
 class InferenceService:
@@ -59,14 +60,19 @@ class InferenceService:
             model.fc = torch.nn.Linear(model.fc.in_features, len(labels))
         else:
             model.classifier[-1] = torch.nn.Linear(model.classifier[-1].in_features, len(labels))
+        if checkpoint.get("quantized"):
+            model = torch.ao.quantization.quantize_dynamic(
+                model, {torch.nn.Linear}, dtype=torch.qint8
+            )
         try:
             model.load_state_dict(checkpoint["state_dict"])
         except (KeyError, RuntimeError) as exc:
             raise PredictionError("Checkpoint weights do not match its architecture") from exc
         model.eval()
         service = cls(model, labels, architecture)
+        image_size = int(checkpoint.get("image_size", 224))
         service._transform = transforms.Compose(
-            [transforms.Resize((224, 224)), transforms.ToTensor(),
+            [transforms.Resize((image_size, image_size)), transforms.ToTensor(),
              transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]
         )
         return service
@@ -93,6 +99,17 @@ class InferenceService:
             tensor = self._transform(image).unsqueeze(0)
             with torch.inference_mode():
                 probabilities = torch.softmax(self.model(tensor), dim=1)[0]
-            index = int(torch.argmax(probabilities))
-            label, confidence = self.labels[index], float(probabilities[index])
-        return Prediction(label, confidence, self.model_name, (time.perf_counter() - started) * 1000, self.is_demo)
+            values, indexes = torch.topk(probabilities, min(5, len(self.labels)))
+            top_k = tuple(
+            (self.labels[int(item)], float(value))
+            for value, item in zip(values, indexes)
+            )
+            label, confidence = top_k[0]
+        return Prediction(
+            label,
+            confidence,
+            self.model_name,
+            (time.perf_counter() - started) * 1000,
+            self.is_demo,
+            top_k if not self.is_demo else (),
+        )

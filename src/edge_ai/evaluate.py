@@ -25,11 +25,16 @@ def evaluate_checkpoint(checkpoint_path: Path, manifest_path: Path, output_path:
         model.classifier[-1] = torch.nn.Linear(model.classifier[-1].in_features, len(labels))
     else:
         raise ValueError(f"Unsupported checkpoint architecture: {architecture}")
+    if checkpoint.get("quantized"):
+        model = torch.ao.quantization.quantize_dynamic(
+            model, {torch.nn.Linear}, dtype=torch.qint8
+        )
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
+    image_size = int(checkpoint.get("image_size", 224))
     transform = transforms.Compose(
         [
-            transforms.Resize((224, 224)),
+            transforms.Resize((image_size, image_size)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ]

@@ -10,7 +10,7 @@ def train(args: argparse.Namespace) -> None:
     import torch
     from PIL import Image
     from torch import nn
-    from torch.utils.data import DataLoader, Dataset
+    from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
     from torchvision import models, transforms
 
     random.seed(args.seed)
@@ -20,14 +20,33 @@ def train(args: argparse.Namespace) -> None:
         rows = list(csv.DictReader(handle))
     labels = sorted({row["label"] for row in rows})
     label_to_index = {label: index for index, label in enumerate(labels)}
-    transform = transforms.Compose([transforms.Resize((args.image_size, args.image_size)), transforms.ToTensor()])
+    normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    transform = transforms.Compose(
+        [
+            transforms.RandomResizedCrop(args.image_size, scale=(0.75, 1.0)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(12),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+            transforms.ToTensor(),
+            normalize,
+            transforms.RandomErasing(p=0.15, scale=(0.02, 0.12)),
+        ]
+    )
+    validation_transform = transforms.Compose(
+        [
+            transforms.Resize((args.image_size, args.image_size)),
+            transforms.ToTensor(),
+            normalize,
+        ]
+    )
     samples = [(row["path"], label_to_index[row["label"]]) for row in rows if row["split"] == "train"]
     validation_samples = [
         (row["path"], label_to_index[row["label"]]) for row in rows if row["split"] == "validation"
     ]
     class ManifestDataset(Dataset):
-        def __init__(self, items):
+        def __init__(self, items, item_transform):
             self.items = items
+            self.item_transform = item_transform
 
         def __len__(self):
             return len(self.items)
@@ -36,10 +55,10 @@ def train(args: argparse.Namespace) -> None:
             path, target = self.items[index]
             with Image.open(path) as image:
                 image = image.convert("RGB")
-            return transform(image), target
+            return self.item_transform(image), target
 
-    dataset = ManifestDataset(samples)
-    validation_dataset = ManifestDataset(validation_samples)
+    dataset = ManifestDataset(samples, transform)
+    validation_dataset = ManifestDataset(validation_samples, validation_transform)
     if args.model == "resnet18":
         model = models.resnet18(weights=None if args.no_pretrained else models.ResNet18_Weights.DEFAULT)
         model.fc = nn.Linear(model.fc.in_features, len(labels))
@@ -47,10 +66,19 @@ def train(args: argparse.Namespace) -> None:
         model = models.mobilenet_v3_small(weights=None if args.no_pretrained else models.MobileNet_V3_Small_Weights.DEFAULT)
         model.classifier[-1] = nn.Linear(model.classifier[-1].in_features, len(labels))
     model.to(device)
-    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    if args.balanced_sampling:
+        counts = [0] * len(labels)
+        for _, target in samples:
+            counts[target] += 1
+        weights = [1.0 / max(counts[target], 1) for _, target in samples]
+        sampler = WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
+        loader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, num_workers=0)
+    else:
+        loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
     validation_loader = DataLoader(validation_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
-    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(args.epochs, 1))
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     best_loss = float("inf")
     best_state = None
     for epoch in range(args.epochs):
@@ -68,9 +96,10 @@ def train(args: argparse.Namespace) -> None:
             for images, targets in validation_loader:
                 validation_loss += float(criterion(model(images.to(device)), targets.to(device)))
         validation_loss /= max(len(validation_loader), 1)
+        scheduler.step()
         print(
             f"epoch={epoch + 1} train_loss={total / max(len(loader), 1):.4f} "
-            f"validation_loss={validation_loss:.4f}"
+            f"validation_loss={validation_loss:.4f} lr={scheduler.get_last_lr()[0]:.6f}"
         )
         if validation_loss < best_loss:
             best_loss = validation_loss
@@ -101,6 +130,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--no-pretrained", action="store_true")
+    parser.add_argument("--balanced-sampling", action="store_true")
     train(parser.parse_args())
 
 
