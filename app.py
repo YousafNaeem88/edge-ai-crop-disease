@@ -6,18 +6,16 @@ import streamlit as st
 from edge_ai.inference import InferenceService, PredictionError
 from edge_ai.storage import HistoryStore
 
-ARTIFACT = next(
-    (
-        candidate
-        for candidate in (
-            Path("artifacts/indian_multicrop_mobilenet_v3_small_full.pt"),
-            Path("artifacts/indian_multicrop_mobilenet_v3_small.pt"),
-            Path("artifacts/model.pt"),
-        )
-        if candidate.exists()
-    ),
-    Path("artifacts/model.pt"),
-)
+MODEL_OPTIONS = {
+    "Unified multi-crop model": Path("artifacts/indian_multicrop_mobilenet_v3_small_full.pt"),
+    "Corn specialist": Path("artifacts/indian_corn_mobilenet_v3_small_specialist.pt"),
+    "Cotton specialist": Path("artifacts/indian_cotton_mobilenet_v3_small_specialist.pt"),
+    "Jute specialist": Path("artifacts/indian_jute_mobilenet_v3_small_specialist.pt"),
+    "Rice specialist": Path("artifacts/indian_rice_mobilenet_v3_small_specialist.pt"),
+    "Sugarcane specialist": Path("artifacts/indian_sugarcane_mobilenet_v3_small_specialist.pt"),
+    "Wheat specialist": Path("artifacts/indian_wheat_mobilenet_v3_small_specialist.pt"),
+    "PlantVillage model": Path("artifacts/model.pt"),
+}
 DB_PATH = Path("data/history.sqlite3")
 
 st.set_page_config(page_title="Crop Disease Edge-AI", page_icon="🌿", layout="wide")
@@ -31,6 +29,13 @@ st.warning(
 
 store = HistoryStore(DB_PATH)
 load_error = None
+with st.sidebar:
+    selected_model = st.selectbox(
+        "Model",
+        [name for name, path in MODEL_OPTIONS.items() if path.exists()]
+        or ["Demo mode"],
+    )
+ARTIFACT = MODEL_OPTIONS.get(selected_model, Path("artifacts/model.pt"))
 if ARTIFACT.exists():
     try:
         service = InferenceService.from_checkpoint(ARTIFACT)
@@ -48,7 +53,7 @@ with st.sidebar:
             st.error(f"Checkpoint fallback: {load_error}")
         st.code("python -m edge_ai.train ...", language="powershell")
     else:
-        st.success(f"Model loaded: {service.model_name}")
+        st.success(f"Model loaded: {selected_model}")
     page = st.radio("Navigate", ["Predict", "History", "Results", "About"])
 
 if page == "Predict":

@@ -96,6 +96,26 @@ per-crop metrics, provenance, quantization results, and limitations are in
 `docs/INDIAN_MULTICROP_EXPERIMENT.md`. Mustard is explicitly not claimed by
 this model because the source contains no mustard classes.
 
+### Crop-specific specialist models
+
+For higher accuracy within a known crop, train a specialist model. The app
+automatically lists every specialist checkpoint that exists under `artifacts`
+and lets you select it from the sidebar:
+
+```powershell
+python scripts/train_crop_specialists.py --crop corn --epochs 4
+python scripts/train_crop_specialists.py --crop cotton --epochs 4
+python scripts/train_crop_specialists.py --crop rice --epochs 4
+python scripts/train_crop_specialists.py --crop sugarcane --epochs 4
+python scripts/train_crop_specialists.py --crop wheat --epochs 4
+python scripts/train_crop_specialists.py --crop jute --epochs 4
+```
+
+Use the specialist when the crop is known; use the unified model when it is
+unknown. Specialist accuracy must be reported against its own crop test split,
+not compared directly with the unified all-crop accuracy.
+The measured comparison is documented in `docs/CROP_SPECIALISTS.md`.
+
 Train a baseline or lightweight model:
 
 ```powershell
